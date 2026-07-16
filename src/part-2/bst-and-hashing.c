@@ -32,8 +32,14 @@ typedef struct HashNode {
 
 int dateToInt(const char* date) {
     int day = 0, month = 0, year = 0;
+
     if (sscanf(date, "%d/%d/%d", &day, &month, &year) != 3)
         return -1;
+
+    /*
+     * Convert day/month/year into yyyymmdd so dates can be compared
+     * as simple integers.
+     */
     return year * 10000 + month * 100 + day;
 }
 
@@ -52,11 +58,16 @@ int splitCSVLine(const char* line, char fields[][MAX_FIELD], int maxFields) {
     int j = 0;
     int insideQuotes = 0;
 
+    /*
+     * Split a CSV line while preserving commas that appear inside
+     * quoted fields, such as the Commodity field.
+     */
     while (line[i] != '\0' && field < maxFields) {
         char c = line[i];
 
         if (c == '"') {
             insideQuotes = !insideQuotes;
+
             if (j < MAX_FIELD - 1)
                 fields[field][j++] = c;
         } else if (c == ',' && !insideQuotes) {
@@ -118,8 +129,12 @@ Record* loadRecords(const char* filename, int* count) {
         return NULL;
     }
 
-    fgets(line, sizeof(line), file); // skip header
+    fgets(line, sizeof(line), file);
 
+    /*
+     * Records are stored in a dynamically growing array because the
+     * file size may exceed the initial capacity.
+     */
     while (fgets(line, sizeof(line), file)) {
         Record record;
 
@@ -168,6 +183,10 @@ int compareDateKey(const Record* a, const Record* b) {
     if (dateA < dateB) return -1;
     if (dateA > dateB) return 1;
 
+    /*
+     * Extra fields are used as tie-breakers because many records can
+     * share the same date.
+     */
     cmp = strcmp(a->direction, b->direction);
     if (cmp != 0) return cmp;
 
@@ -195,18 +214,21 @@ int compareDateKey(const Record* a, const Record* b) {
 int compareValueKey(const Record* a, const Record* b) {
     if (a->value < b->value) return -1;
     if (a->value > b->value) return 1;
+
     return compareDateKey(a, b);
 }
 
 int qsortCompareDate(const void* a, const void* b) {
     const Record* recordA = (const Record*)a;
     const Record* recordB = (const Record*)b;
+
     return compareDateKey(recordA, recordB);
 }
 
 int qsortCompareValue(const void* a, const void* b) {
     const Record* recordA = (const Record*)a;
     const Record* recordB = (const Record*)b;
+
     return compareValueKey(recordA, recordB);
 }
 
@@ -221,6 +243,7 @@ BSTNode* createBSTNode(Record record) {
     newNode->data = record;
     newNode->left = NULL;
     newNode->right = NULL;
+
     return newNode;
 }
 
@@ -228,6 +251,10 @@ BSTNode* buildBalancedBST(Record records[], int left, int right) {
     if (left > right)
         return NULL;
 
+    /*
+     * The array is sorted before this function is called.
+     * Choosing the middle element creates a balanced BST.
+     */
     int mid = left + (right - left) / 2;
     BSTNode* root = createBSTNode(records[mid]);
 
@@ -298,6 +325,7 @@ BSTNode* searchValueBST(BSTNode* root, unsigned long long value) {
 BSTNode* findMinNode(BSTNode* root) {
     while (root != NULL && root->left != NULL)
         root = root->left;
+
     return root;
 }
 
@@ -325,6 +353,10 @@ BSTNode* deleteDateBST(BSTNode* root, const char* date) {
             return temp;
         }
 
+        /*
+         * For a node with two children, replace it with the smallest
+         * node from the right subtree.
+         */
         BSTNode* temp = findMinNode(root->right);
         root->data = temp->data;
         root->right = deleteDateBST(root->right, temp->data.date);
@@ -373,8 +405,10 @@ void freeBST(BSTNode* root) {
 
 int computeHash(const char* date, int m) {
     int dateNumber = dateToInt(date);
+
     if (dateNumber < 0)
         dateNumber = 0;
+
     return dateNumber % m;
 }
 
@@ -388,6 +422,7 @@ HashNode* createHashNode(Record record) {
 
     newNode->data = record;
     newNode->next = NULL;
+
     return newNode;
 }
 
@@ -395,6 +430,9 @@ void insertHashRecord(HashNode** hashTable, int m, Record record) {
     int index = computeHash(record.date, m);
     HashNode* newNode = createHashNode(record);
 
+    /*
+     * Collisions are handled with separate chaining.
+     */
     newNode->next = hashTable[index];
     hashTable[index] = newNode;
 }
@@ -406,6 +444,7 @@ HashNode* searchHash(HashNode** hashTable, int m, const char* date) {
     while (current != NULL) {
         if (strcmp(current->data.date, date) == 0)
             return current;
+
         current = current->next;
     }
 
@@ -572,6 +611,10 @@ BSTNode* valueBSTMenu(BSTNode* root) {
             node = searchValueBST(root, value);
 
             if (node != NULL) {
+                /*
+                 * Updating the key of a Value BST requires deletion and
+                 * reinsertion so the BST ordering remains valid.
+                 */
                 Record updated = node->data;
                 root = deleteValueBST(root, value);
                 printf("Enter new Value: ");
@@ -666,19 +709,28 @@ int main(void) {
     scanf("%d", &menuOption);
 
     if (menuOption == 1) {
+        /*
+         * Sorting by date first allows construction of a balanced Date BST.
+         */
         qsort(records, count, sizeof(Record), qsortCompareDate);
         BSTNode* dateBST = buildBalancedBST(records, 0, count - 1);
+
         printf("Balanced Date BST created with %d records.\n", count);
         dateBST = dateBSTMenu(dateBST);
         freeBST(dateBST);
     } else if (menuOption == 2) {
+        /*
+         * Sorting by value first allows construction of a balanced Value BST.
+         */
         qsort(records, count, sizeof(Record), qsortCompareValue);
         BSTNode* valueBST = buildBalancedBST(records, 0, count - 1);
+
         printf("Balanced Value BST created with %d records.\n", count);
         valueBST = valueBSTMenu(valueBST);
         freeBST(valueBST);
     } else if (menuOption == 3) {
         int m;
+
         printf("Enter the number of buckets: ");
         scanf("%d", &m);
 

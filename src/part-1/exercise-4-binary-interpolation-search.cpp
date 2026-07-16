@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <string>
 #include <iomanip>
 #include <cstdio>
@@ -22,6 +21,10 @@ int Convert(string date1) {
     if (sscanf(date1.c_str(), "%d/%d/%d", &day, &month, &year) != 3)
         return -1;
 
+    /*
+     * Convert day/month/year into yyyymmdd so dates can be compared
+     * as simple integers.
+     */
     return year * 10000 + month * 100 + day;
 }
 
@@ -37,6 +40,9 @@ void QuickSort(int left, int right) {
     r = right;
     pivot = reg[(l + r) / 2].Date;
 
+    /*
+     * The records must be sorted by Date before applying the search.
+     */
     do {
         while (compareDates(pivot, reg[r].Date))
             --r;
@@ -59,6 +65,10 @@ void QuickSort(int left, int right) {
 }
 
 int findFirstDateMatch(int index, int target) {
+    /*
+     * Multiple records may have the same date, so move backwards to return
+     * the first matching record in sorted order.
+     */
     while (index > 0 && Convert(reg[index - 1].Date) == target) {
         index--;
     }
@@ -75,6 +85,10 @@ int binaryInterpolationSearch(int size, string targetDate) {
     int left = 0;
     int right = size - 1;
 
+    /*
+     * Hybrid search: the middle element is checked like Binary Search,
+     * while interpolation is used to estimate a likely target position.
+     */
     while (left <= right) {
         int leftDate = Convert(reg[left].Date);
         int rightDate = Convert(reg[right].Date);
@@ -112,13 +126,6 @@ int binaryInterpolationSearch(int size, string targetDate) {
         } else {
             left = position + 1;
         }
-
-        /*
-            Binary fallback:
-            If interpolation gives a poor position, the loop still narrows the
-            search interval safely. The middle position is also checked above,
-            which makes this a hybrid binary/interpolation search.
-        */
     }
 
     return -1;
@@ -162,7 +169,7 @@ int main() {
         return 1;
     }
 
-    getline(file, temp); // Skip header
+    getline(file, temp);
 
     while (lines < max) {
         if (!getline(file, reg[lines].Direction, ','))
@@ -175,6 +182,10 @@ int main() {
         getline(file, reg[lines].Weekday, ',');
         getline(file, reg[lines].Country, ',');
 
+        /*
+         * The Commodity field may contain commas inside quotation marks,
+         * so it is parsed separately from the other CSV fields.
+         */
         file.get(ch);
         com = ch;
 
@@ -187,7 +198,7 @@ int main() {
             }
 
             com = com + ch;
-            file.get(ch); // consume comma after closing quote
+            file.get(ch);
         } else {
             getline(file, temp, ',');
             com = com + temp;

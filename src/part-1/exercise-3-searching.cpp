@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <string>
 #include <iomanip>
 #include <cstdio>
@@ -22,6 +21,10 @@ int Convert(string date1) {
     if (sscanf(date1.c_str(), "%d/%d/%d", &day, &month, &year) != 3)
         return -1;
 
+    /*
+     * Convert day/month/year into yyyymmdd so dates can be compared
+     * as simple integers.
+     */
     return year * 10000 + month * 100 + day;
 }
 
@@ -37,6 +40,10 @@ void QuickSort(int left, int right) {
     r = right;
     pivot = reg[(l + r) / 2].Date;
 
+    /*
+     * The records are sorted by Date before applying Binary Search
+     * or Interpolation Search.
+     */
     do {
         while (compareDates(pivot, reg[r].Date))
             --r;
@@ -81,6 +88,10 @@ int interpolationSearch(int size, const string& tar) {
     int low = 0;
     int high = size - 1;
 
+    /*
+     * Interpolation Search estimates the possible position of the target
+     * date inside the sorted date range.
+     */
     while (low <= high) {
         int lowDate = Convert(reg[low].Date);
         int highDate = Convert(reg[high].Date);
@@ -119,6 +130,10 @@ int interpolationSearch(int size, const string& tar) {
 }
 
 int findFirstDateMatch(int index, int target) {
+    /*
+     * The dataset may contain many records with the same date.
+     * Move backwards to show the first matching record in sorted order.
+     */
     while (index > 0 && Convert(reg[index - 1].Date) == target) {
         index--;
     }
@@ -163,7 +178,7 @@ int main() {
         return 1;
     }
 
-    getline(file, temp); // Skip header
+    getline(file, temp);
 
     while (lines < max) {
         if (!getline(file, reg[lines].Direction, ','))
@@ -176,6 +191,10 @@ int main() {
         getline(file, reg[lines].Weekday, ',');
         getline(file, reg[lines].Country, ',');
 
+        /*
+         * The Commodity field may contain commas inside quotation marks,
+         * so it is parsed separately from the other CSV fields.
+         */
         file.get(ch);
         com = ch;
 
@@ -188,7 +207,7 @@ int main() {
             }
 
             com = com + ch;
-            file.get(ch); // consume comma after closing quote
+            file.get(ch);
         } else {
             getline(file, temp, ',');
             com = com + temp;
@@ -220,7 +239,7 @@ int main() {
     cin >> choice;
 
     while (choice != 1 && choice != 2) {
-        cout << "Wrong input try again: ";
+        cout << "Wrong input, try again: ";
         cin >> choice;
     }
 

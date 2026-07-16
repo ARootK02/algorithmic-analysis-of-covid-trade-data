@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <string>
 #include <iomanip>
 #include <algorithm>
@@ -33,6 +32,9 @@ void heapify(int n, int i) {
 }
 
 void heapSort(int n) {
+    /*
+     * Heap Sort orders the records by the Cumulative field.
+     */
     for (int i = n / 2 - 1; i >= 0; i--)
         heapify(n, i);
 
@@ -50,6 +52,9 @@ void QuickSort(int left, int right) {
     r = right;
     pivot = reg[(l + r) / 2].Cumulative;
 
+    /*
+     * QuickSort partitions the records using Cumulative as the sorting key.
+     */
     do {
         while (reg[r].Cumulative > pivot)
             --r;
@@ -84,7 +89,7 @@ int main() {
         return 1;
     }
 
-    getline(file, temp); // Skip header
+    getline(file, temp);
 
     while (lines < max) {
         if (!getline(file, reg[lines].Direction, ','))
@@ -97,17 +102,23 @@ int main() {
         getline(file, reg[lines].Weekday, ',');
         getline(file, reg[lines].Country, ',');
 
+        /*
+         * The Commodity field may contain commas inside quotation marks,
+         * so it is parsed separately from the other CSV fields.
+         */
         file.get(ch);
         com = ch;
 
         if (ch == '"') {
             file.get(ch);
+
             while (ch != '"' && file) {
                 com = com + ch;
                 file.get(ch);
             }
+
             com = com + ch;
-            file.get(ch); // consume comma after closing quote
+            file.get(ch);
         } else {
             getline(file, temp, ',');
             com = com + temp;
@@ -134,7 +145,7 @@ int main() {
     cin >> choice;
 
     while (choice != 1 && choice != 2) {
-        cout << "Wrong input try again: ";
+        cout << "Wrong input, try again: ";
         cin >> choice;
     }
 
@@ -160,7 +171,11 @@ int main() {
          << setw(15) << "Value"
          << setw(15) << "Cumulative" << endl;
 
+    /*
+     * Only the first records are printed to keep the terminal output readable.
+     */
     int displayLimit = 20;
+
     if (lines < displayLimit)
         displayLimit = lines;
 
